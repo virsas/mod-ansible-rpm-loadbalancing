@@ -6,10 +6,22 @@
     state: present
     update_cache: yes
 
+- name: Check DHPARAM
+  stat:
+    path: /etc/ssl/certs/dhparam.pem
+  register: dhparam
+
 - name: Generate DHPARAM
-  shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-  args:
-    creates: /etc/ssl/certs/dhparam.pem
+  local_action: command openssl dhparam -out /tmp/dhparam.pem 2048
+  become: false
+  when: not dhparam.stat.exists
+
+- name: Copy DHPARAM
+  copy:
+    src: /tmp/dhparam.pem
+    dest: /etc/ssl/certs/dhparam.pem
+    mode: 0644
+  when: not dhparam.stat.exists
 
 - name: Install PIP
   yum:
@@ -30,14 +42,14 @@
   register: cert
 
 - name: Generate PEM
-  shell: certbot certonly --nginx -d {{ CERT_DOMAINS | join(',') }} --non-interactive --agree-tos -m {{ CERT_EMAIL }}
+  shell: certbot certonly --nginx -d {{ CERT_DOMAINS | join(',') }} --non-interactive --agree-tos -m {{ CERT_EMAIL }} --pre-hook "systemctl stop nginx" --post-hook "nginx -s stop"
   when: not cert.stat.exists
 
 - name: Configure NGINX
   template:
     src: nginx.conf.j2
     dest: /etc/nginx/nginx.conf
-    mode: 0511
+    mode: 0644
   notify:
   - restart nginx
 
