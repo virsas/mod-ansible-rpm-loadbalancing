@@ -1,0 +1,69 @@
+---
+
+- name: Install NGINX
+  yum:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Generate DHPARAM
+  shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  args:
+    creates: /etc/ssl/certs/dhparam.pem
+
+- name: Install PIP
+  yum:
+    name: python3-pip
+    state: present
+    update_cache: yes
+
+- name: Install CERTBOT
+  pip:
+    name: "{{ item }}"
+  with_items:
+  - certbot
+  - certbot-nginx
+
+- name: Check for PEM
+  stat:
+    path: /etc/letsencrypt/live/{{ CERT_DOMAINS | first }}/cert.pem
+  register: cert
+
+- name: Generate PEM
+  shell: certbot certonly --nginx -d {{ CERT_DOMAINS | join(',') }} --non-interactive --agree-tos -m {{ CERT_EMAIL }}
+  when: not cert.stat.exists
+
+- name: Configure NGINX
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    mode: 0511
+  notify:
+  - restart nginx
+
+- name: Start NGINX
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Install CRON
+  yum:
+    name: cronie
+    state: present
+    update_cache: yes
+
+- name: Start CRON
+  systemd:
+    name: crond
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Configure CRON
+  cron:
+    name: Certbot renewal.
+    job: "certbot renew --no-self-upgrade --quiet"
+    minute: "{{ CRON_RENEWAL_MINUTE }}"
+    hour: "{{ CRON_RENEWAL_HOUR }}"

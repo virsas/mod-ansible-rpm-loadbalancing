@@ -1,0 +1,110 @@
+user nginx;
+worker_processes  auto;
+
+error_log  /var/log/nginx/error.log;
+pid        /run/nginx.pid;
+
+include /usr/share/nginx/modules/*.conf;
+
+events {
+  worker_connections  {{ NGINX_WORKER_CONNECTIONS }};
+  use epoll;
+}
+
+http {
+  log_format  main  '$remote_addr - $remote_user [$time_local] "$host" "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for" '
+                    '$upstream_response_time $request_time';
+
+  access_log  /var/log/nginx/access.log main;
+
+  sendfile        on;
+  tcp_nopush      on;
+
+  keepalive_timeout   {{ NGINX_KEEPALIVE_TIMOUT }};
+  types_hash_max_size {{ NGINX_HASH_MAX_SIZE }};
+
+  server_tokens off;
+  tcp_nodelay on;
+  reset_timedout_connection on;
+
+  include             /etc/nginx/mime.types;
+  default_type        application/octet-stream;
+
+  client_max_body_size {{ NGINX_MAX_BODY_SIZE }};
+
+  proxy_intercept_errors off;
+
+  # this will set in what cases should loadbalancer failover to second proxy server
+  proxy_next_upstream http_502 http_503 error;
+
+  # some configuration for header because on backend server it would be as local connection
+  proxy_set_header        Host $host;
+  proxy_set_header        X-Real-IP $remote_addr;
+  proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header        X-Queue-Start "t=${msec}000";
+  proxy_set_header        X-Forwarded-Proto $scheme;
+
+  ssl_protocols {{ NGINX_SSL_PROTOCOLS }};
+  ssl_session_cache shared:SSL:1m;
+  ssl_prefer_server_ciphers on;
+  ssl_ciphers {{ NGINX_SSL_CIPHERS }};
+  ssl_dhparam /etc/ssl/certs/dhparam.pem;
+  ssl_session_timeout {{ NGINX_SSL_TIMEOUT }};
+
+  ssl_certificate /etc/letsencrypt/live/{{ CERT_DOMAINS | first }}/cert.pem;
+  ssl_certificate_key /etc/letsencrypt/live/{{ CERT_DOMAINS | first }}/privkey.pem;
+
+{% for backend in NGINX_BACKENDS %}
+  upstream {{ backend.name }} {
+    {{ backend.method }};
+    keepalive {{ backend.idle_connections }};
+{% for server in backend.servers %}
+    server {{ server.ip }}:{{ server.port }} max_fails={{ NGINX_MAX_FAILS }} fail_timeout={{ NGINX_FAIL_TIMEOUT }};
+{% endfor %}
+  }
+{% endfor %}
+
+  server {
+    listen       80;
+    listen       [::]:80;
+
+    server_name _;
+
+    return 301 https://$host$request_uri;
+  }
+
+{% for frontend in NGINX_FRONTEND_PROXIES %}
+  server {
+    listen       443 ssl http2;
+    listen       [::]:443 ssl http2;
+
+    server_name   {{ frontend.domain }};
+
+    keepalive_timeout {{ frontend.timeout }};
+
+    location / {
+      proxy_read_timeout {{ frontend.timeout }};
+      proxy_pass http://{{ frontend.backend }};
+    }
+  }
+{% endfor %}
+
+  server {
+    listen       443 ssl http2;
+    listen       [::]:443 ssl http2;
+
+    server_name _;
+
+    root /usr/share/nginx/html;
+
+    error_page 404 /404.html;
+    location = /404.html {
+    }
+
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+    }
+  }
+}
