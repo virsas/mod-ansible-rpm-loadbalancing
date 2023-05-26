@@ -1,5 +1,4 @@
 ---
-
 CERT_EMAIL: system@example.com
 CERT_DOMAINS:
   - example.com
@@ -24,3 +23,4 @@ NGINX_FAIL_TIMEOUT: 15s
 
 NGINX_BACKENDS: []
 NGINX_FRONTEND_PROXIES: []
+NGINX_FRONTEND_REDIRECTS: []

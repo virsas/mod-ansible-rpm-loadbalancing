@@ -4,7 +4,7 @@
 
 ### create requirements file
 
-``` bash
+```bash
 cd ANSIBLE_FOLDER
 mkdir requirements
 touch requirements/loadbalancing.yml
@@ -12,13 +12,12 @@ touch requirements/loadbalancing.yml
 
 ### file content
 
-``` yaml
+```yaml
 ---
-
 # ansible-galaxy install -p vss_galaxy_roles --force -r requirements/loadbalancing.yml
 - src: "https://github.com/virsas/mod-ansible-rpm-loadbalancing"
   scm: git
-  version: v1.0.0
+  version: v1.1.0
   name: loadbalancing
   path: vss_galaxy_roles
 ```
@@ -27,7 +26,7 @@ touch requirements/loadbalancing.yml
 
 ### Installation
 
-``` bash
+```bash
 ansible-galaxy install -p galaxy_roles --force -r requirements/loadbalancing.yml
 ```
 
@@ -39,7 +38,7 @@ If you are using git for your playbooks and sites configuration, add vss_galaxy_
 
 ### Direct access
 
-``` bash
+```bash
 $ cd vss_galaxy_roles
 $ ls
 loadbalancing
@@ -57,7 +56,7 @@ $
 
 ### Access from ansible (ansible.cfg)
 
-``` bash
+```bash
 [defaults]
 gathering = smart
 roles_path=./roles:../roles:../../roles:./vss_galaxy_roles
@@ -72,9 +71,8 @@ host_key_checking=False
 
 ### Playbook (./playbooks/loadbalancing.yml)
 
-``` yaml
+```yaml
 ---
-
 - hosts: loadbalancing
   remote_user: ec2-user
   become: yes
@@ -84,16 +82,15 @@ host_key_checking=False
 
 ### Inventory (./sites/NAME/inventory)
 
-``` txt
+```txt
 [loadbalancing]
 loadbalancing_01
 ```
 
 ### Host vars (./sites/NAME/host_vars/loadbalancing_01.yml)
 
-``` yaml
+```yaml
 ---
-
 ansible_ssh_host: 1.1.1.1
 ```
 
@@ -101,9 +98,8 @@ ansible_ssh_host: 1.1.1.1
 
 Please see the variables below to get the complete list of possible modifications. The YAML file below is just a basic example of a minimal configuration.
 
-``` yaml
+```yaml
 ---
-
 CERT_EMAIL: system@example.org
 CERT_DOMAINS:
   - example.org
@@ -121,17 +117,20 @@ NGINX_FRONTEND_PROXIES:
   - domain: admin-api.example.org
     timeout: 30s
     backend: admin
+NGINX_FRONTEND_REDIRECTS:
+  - domain: www.example.org
+    redirect_to: www.example.com/org/
 ```
 
 ## Usage
 
-``` bash
+```bash
 ansible-playbook -i sites/NAME/inventory playbooks/loadbalancing.yml --diff
 ```
 
 ## Variables
 
-``` yml
+```yml
 CERT_EMAIL: info@example.com
 CERT_DOMAINS:
   - example.com
@@ -156,4 +155,5 @@ NGINX_FAIL_TIMEOUT: 15s
 
 NGINX_BACKENDS: []
 NGINX_FRONTEND_PROXIES: []
+NGINX_FRONTEND_REDIRECTS: []
 ```

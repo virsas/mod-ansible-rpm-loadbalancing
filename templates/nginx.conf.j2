@@ -75,6 +75,17 @@ http {
     return 301 https://$host$request_uri;
   }
 
+{% for redirect in NGINX_FRONTEND_REDIRECTS %}
+  server {
+    listen       443 ssl http2;
+    listen       [::]:443 ssl http2;
+
+    server_name   {{ redirect.domain }};
+
+    return 301 https://{{ redirect.redirect_to }};
+  }
+{% endfor %}
+
 {% for frontend in NGINX_FRONTEND_PROXIES %}
   server {
     listen       443 ssl http2;
