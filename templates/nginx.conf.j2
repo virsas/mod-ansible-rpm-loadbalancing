@@ -53,7 +53,7 @@ http {
   ssl_dhparam /etc/ssl/certs/dhparam.pem;
   ssl_session_timeout {{ NGINX_SSL_TIMEOUT }};
 
-  ssl_certificate /etc/letsencrypt/live/{{ CERT_DOMAINS | first }}/cert.pem;
+  ssl_certificate /etc/letsencrypt/live/{{ CERT_DOMAINS | first }}/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/{{ CERT_DOMAINS | first }}/privkey.pem;
 
 {% for backend in NGINX_BACKENDS %}

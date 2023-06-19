@@ -17,7 +17,7 @@ touch requirements/loadbalancing.yml
 # ansible-galaxy install -p vss_galaxy_roles --force -r requirements/loadbalancing.yml
 - src: "https://github.com/virsas/mod-ansible-rpm-loadbalancing"
   scm: git
-  version: v1.1.0
+  version: v1.1.1
   name: loadbalancing
   path: vss_galaxy_roles
 ```
